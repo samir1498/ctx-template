@@ -1,0 +1,16 @@
+{
+  "name": "personal-context",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ctx": "bun run bin/ctx.ts"
+  },
+  "dependencies": {
+    "citty": "^0.2.2",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/bun": "latest"
+  }
+}

@@ -4,30 +4,75 @@ Two patterns I use with CLI AI agents (opencode, Claude CLI) for persistent memo
 
 ---
 
-## 1. Context Repo (`personal-context/`)
+## 1. Context System (`personal-context/`)
 
-A folder that survives context windows. The agent reads it at session start, writes to it during work, and commits changes so other machines can sync.
+A folder that survives context windows. Uses a CLI (`pc-ctx`) for deterministic plan/roadmap management — saves tokens by reading frontmatter instead of full files.
 
-### Convention (not a tool)
+### Quick start
 
-The agent always reads `MAP.md` first. That file lists everything: what's in progress, what plans exist, where references live.
+1. Clone this repo.
+2. Initialize `personal-context/` as its own git repo with a remote.
+3. Install dependencies: `cd personal-context && bun install`
+4. Create your first plan: `bun run ctx plan add "My First Plan" --priority 50`
+5. On each machine: clone the context repo, pull before work, push after.
 
-Folders inside:
+### Structure
 
 | Folder | Purpose |
 |--------|---------|
-| `progress/` | `now.md` (current snapshot), `daily.md` (intraday log), `YYYY-Www.md` (weekly logs) |
-| `plans/` | Scoped execution plans with tasks |
+| `bin/ctx.ts` | `pc-ctx` CLI — list, show, status, validate, update |
+| `roadmaps/` | High-level initiative maps with plan pointers |
+| `plans/` | YAML-frontmatter plans with tasks + acceptance criteria |
+| `progress/` | `now.md` (focus), `daily.md` (log), `YYY-Www.md` (weekly) |
 | `ideas/` | Rough captures, brainstorming |
 | `references/` | Stable docs, checklists, recurring knowledge |
 | `archive/` | Completed or stale items |
 
-Rules:
-- Text-only. No binaries.
-- When `daily.md` or `now.md` exceed 300 lines: archive them, start fresh.
-- Agent commits and pushes context changes.
-- The context repo is a **separate git repo** from your code repos — it has its own remote, syncs independently.
-- On each machine: pull before work, push after.
+### CLI commands
+
+```bash
+bun run ctx status                # grouped overview (plans by category)
+bun run ctx list                  # all plans
+bun run ctx list --status active  # active plans only
+bun run ctx list --sort priority  # sorted by priority desc
+bun run ctx show <slug>           # plan/roadmap details + refs + backlinks
+bun run ctx validate              # check all files have valid YAML
+
+bun run ctx plan set-status <slug> <status>
+bun run ctx plan task-status <slug> <id> <status>
+bun run ctx plan add <title> [--category] [--priority] [--ref <ref>]
+bun run ctx plan references <slug>   # show outbound + inbound refs
+
+bun run ctx roadmap list
+bun run ctx roadmap show <slug>
+
+bun run ctx research list         # browse research files
+bun run ctx research show <slug>  # read full research file
+bun run ctx graph [slug]          # dependency graph
+
+bun run ctx --help                # built-in help for any command
+```
+
+### Cross-reference system
+
+Plans can reference research files, other plans, and external URLs:
+
+```yaml
+references:
+  - research:playwright-react19-file-input-flakiness  # personal-research/
+  - plan:caching-retry-nestjs-go                       # another plan
+  - url:https://github.com/owner/repo/issues/123       # external link
+
+tasks:
+  - id: fix-thing
+    refs: [research:playwright-react19-file-input-flakiness]
+```
+
+CLI resolves all prefixes (`research:`, `plan:`, `url:`) and shows backlinks automatically.
+
+### Why a CLI?
+
+The plan/roadmap CLI reads YAML frontmatter deterministically. Without it, the agent reads every plan file to check status. With it, `ctx status` gives a complete overview in ~20 lines. Huge token savings per session.
 
 ---
 
@@ -35,33 +80,44 @@ Rules:
 
 Separate from the context repo. Research is **investigation output** — you asked a question, got an answer, saved it. Context is **live planning** — what you're doing right now.
 
+See `personal-research/README.md` for rules.
+
 ### Convention
 
 ```
 personal-research/
-├── domain-name/
-│   ├── 2026-06-17-topic-name.md
-│   └── another-finding.md
-└── README.md
+├── README.md     # Rules
+├── INDEX.md      # Catalog of all files
+└── domain-name/
+    └── YYYY-MM-DD-slug.md
 ```
 
-Rules:
-- One topic per file. Self-contained — the agent reads one file and has all the context.
-- No deep nesting. Two levels max (domain/filename.md).
-- Timestamp prefix when chronology matters (`YYYY-MM-DD-slug.md`).
-- Domain folders = categories that make sense for your work (engineering, marketing, seo, etc.)
-- Agent writes findings back to the relevant file, never creates new files without asking.
+### Research vs Context
+
+| | Research | Context |
+|--|----------|---------|
+| What | Investigation output | Live planning |
+| When | After exploring a question | During/after sessions |
+| Lifespan | Permanent reference | Evolving status |
+| CLI | `bun run ctx research list/show` | `bun run ctx status/list/show/plan` |
+
+### Cross-referencing
+
+When research produces an actionable plan, link them:
+1. Create the plan: `bun run ctx plan add "..." --ref research:my-finding`
+2. Or edit the plan's frontmatter to add `references: [research:my-finding]`
+3. Verify: `bun run ctx plan references <slug>` shows resolved refs + backlinks
 
 ---
 
 ## 3. Plugins
 
-Two opencode plugins that make this system work across sessions:
+Two opencode plugins make this system work across sessions:
 
 | Plugin | What it does | Where it goes |
 |--------|-------------|---------------|
-| `open-mem` | Cross-session memory via SQLite. Stores decisions, bugs, features, discoveries — survives context window resets. Query with `mem-find`. | Project `.opencode/opencode.json` — install per project |
-| `opencode-skills-collection` | 100+ community skills for common tasks (AI, backend, cloud, testing, etc.). Skills auto-load without explicit import. | Global `~/.config/opencode/opencode.json` — install once |
+| `open-mem` | Cross-session memory via SQLite. Decisions, bugs, features — survives context window resets. | Per project: `opencode plugin install open-mem` |
+| `opencode-skills-collection` | 100+ community skills for common tasks. Auto-load without explicit import. | Global: `opencode plugin install opencode-skills-collection` |
 
 ### Install
 
@@ -78,28 +134,18 @@ opencode plugin install open-mem
 
 ## 4. Skills
 
-Reusable agent instructions that the AI loads by name. Not tied to any specific project — just patterns that work anywhere.
+Reusable agent instructions that the AI loads by name. Compatible with both opencode and Claude CLI.
 
 | Skill | What it does |
 |-------|-------------|
-| `pc-context` | Read/update the context system: view now.md, append to daily.md, archive files |
-| `pc-plan` | Create, read, or list execution plans in the plans folder |
+| `pc-context` | Read/update the context system: run `pc-ctx status`, log to daily.md, archive files |
+| `pc-plan` | Manage plans via `pc-ctx list/show/add`, including cross-references |
+| `pc-research` | Create, browse, and link research files to plans |
 | `pc-diagnose` | Debugging loop: reproduce → minimise → hypothesise → fix |
-| `pc-git-guardrails` | Git safety rules embedded in agent behavior |
 | `pc-tdd` | Test-driven development: red-green-refactor |
 | `pc-pr` | Pull request format: branch naming, commit strategy, PR body template |
 | `pc-grill-me` | Stress-test a plan or design by asking hard questions |
 | `pc-zoom-out` | Get a higher-level perspective on unfamiliar code |
 | `pc-coding-style` | Code conventions: naming, commits, comments |
 
-The `pc-` prefix just means these belong to the personal-context system.
-
----
-
-## How to start
-
-1. Clone this repo wherever you want.
-2. Initialize `personal-context/` as its own git repo with a remote (GitHub, etc.).
-3. On each machine where you work, clone the context repo separately.
-4. On first session, tell your agent about the system.
-5. Research can be a folder in your workspace or a separate repo — whatever fits.
+Skills live in `personal-context/.skills/`. You can symlink them: `.skills → personal-context/.skills/`
