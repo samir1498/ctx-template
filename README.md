@@ -1,4 +1,4 @@
-# opencode-context-template
+# ctx-template
 
 Two patterns I use with CLI AI agents (opencode, Claude CLI) for persistent memory across sessions and machines.
 

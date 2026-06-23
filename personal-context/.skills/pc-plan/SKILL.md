@@ -6,11 +6,24 @@ argument-hint: [list|read <name>|create <name>]
 
 Manage execution plans in `personal-context/plans/`.
 
+## MCP tools (preferred)
+Use these MCP tools over raw CLI:
+- `plan_list` — list all plans (filter by status/category)
+- `plan_show` — full plan details by slug
+- `plan_add` — create a new plan
+- `plan_add_task` — add a task to a plan
+- `plan_references` — show refs + backlinks
+- `plan_validate` — validate all plan files
+- `roadmap_list` / `roadmap_show`
+- `research_list` / `research_show`
+
+Fall back to `ctx <subcommand>` if MCP tools are unavailable.
+
 ## Behavior
 
-- **"list" or no args** — Run `bun run ctx list` to see all plans
-- **"read <slug>"** — Run `bun run ctx show <slug>` for plan details
-- **"create <title>"** — Run `bun run ctx plan add "<title>" --category <c> --priority <n> [--ref research:<slug>]` to scaffold a new plan
+- **"list" or no args** — Use `plan_list` MCP tool (fallback: `ctx list`)
+- **"read <slug>"** — Use `plan_show` MCP tool (fallback: `ctx show <slug>`)
+- **"create <title>"** — Use `plan_add` MCP tool with title, category, priority (fallback: `ctx plan add "<title>" --category <c> --priority <n> [--ref research:<slug>]`)
 
 ## Plan format
 
@@ -48,9 +61,9 @@ references:                  # optional: cross-links to research, plans, or URLs
 - Use `url:<full-url>` for external links
 - Add references to tasks when the task is directly informed by research (`refs` field)
 - Add references at the plan level when the whole plan depends on or relates to research
-- After adding refs, verify with `bun run ctx plan references <slug>` to check resolution
+- After adding refs, use `plan_references` MCP tool to verify (fallback: `ctx plan references <slug>`)
 - When completing a plan that was informed by research, update the research INDEX.md status if applicable
 
 ## After creating
-- Run `bun run ctx validate` to verify the file
+- Run `plan_validate` MCP tool to verify (fallback: `ctx validate`)
 - Commit: `git -C personal-context commit -am "plan: add <slug>"`

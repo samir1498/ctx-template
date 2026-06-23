@@ -14,29 +14,42 @@ A shared folder for planning, progress, ideas, and references. Survives context 
 - `references/` — Stable docs, checklists, useful links
 - `archive/` — Completed or stale items
 
+## MCP tools (preferred)
+
+All plan/roadmap/research operations have MCP tools. Use them in agents over raw CLI:
+- `plan_list` / `plan_show` / `plan_status` / `plan_validate`
+- `plan_set_status` / `plan_task_status` / `plan_add` / `plan_add_task`
+- `plan_references` — show refs + backlinks
+- `roadmap_list` / `roadmap_show`
+- `research_list` / `research_show`
+- `graph` — dependency graph
+- `sync` — git push/pull
+
+Fall back to `ctx <subcommand>` if MCP tools are unavailable.
+
 ## Workflow
 
-1. Run `bun run ctx status` for current overview
-2. Run `bun run ctx list --status active` for active plans
+1. Use `plan_status` MCP tool for current overview (fallback: `ctx status`)
+2. Use `plan_list` with `status: active` (fallback: `ctx list --status active`)
 3. Read `progress/now.md` for today's focus
 4. Work happens. Agent logs progress to `daily.md`
-5. Update plan statuses via `pc-ctx plan set-status`
+5. Update plan statuses via `plan_set_status` MCP tool (fallback: `ctx plan set-status`)
 6. Completed plans move to `archive/`
 7. Context repo is a separate git repo — push/pull for cross-machine sync
 
 ## CLI
 
 ```bash
-bun run ctx status                # grouped overview
-bun run ctx list                  # all plans
-bun run ctx list --status active  # active plans only
-bun run ctx show <slug>           # plan details
-bun run ctx validate              # check all files have valid YAML
-bun run ctx plan set-status <slug> <status>
-bun run ctx plan task-status <slug> <id> <status>
-bun run ctx plan add <title> [--category] [--priority]
-bun run ctx roadmap list          # all roadmaps
-bun run ctx roadmap show <slug>   # roadmap details
+ctx status                # grouped overview
+ctx list                  # all plans
+ctx list --status active  # active plans only
+ctx show <slug>           # plan details
+ctx validate              # check all files have valid YAML
+ctx plan set-status <slug> <status>
+ctx plan task-status <slug> <id> <status>
+ctx plan add <title> [--category] [--priority]
+ctx roadmap list          # all roadmaps
+ctx roadmap show <slug>   # roadmap details
 ```
 
 ## Plan format
